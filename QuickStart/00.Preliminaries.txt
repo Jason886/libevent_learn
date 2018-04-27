@@ -1,0 +1,56 @@
+1.Libevent的组成
+evutil
+    通用功能,以抽象出不同平台网络实现之间的差异.
+
+event & event_base
+    libevent的心脏.它为各种平台特定的,基于事件的非阻塞IO后端提供了一个抽象的API.通过它你能知道socket在什么时候可读或可写,实现基本的超时,探测操作系统signal.
+
+bufferevent
+    对libevent的event-base核心进行了封装,使更便于使用.并且使你的应用可以请求带缓冲的读和写.
+
+evbuffer
+    这个模块实现了bufferevent所基于的缓冲功能.并提供高效易用的访问接口.
+
+evhttp
+    一个简单的HTTP client/server实现.
+
+evdns
+    一个简单的DNS client/server实现.
+
+evrpc
+    一个简单的RPC实现. RPC:远程过程调用
+
+2.库
+默认安装以下库:
+libevent_core
+    核心的事件和缓冲功能.这个库包括所有event_base, evbuffer, bufferevent, 和utility 函数.
+
+libevent_extra
+    实现了特定的协议.包括 HTTP DNS 和 RPC.
+
+libevent
+    因为历史原因保留了这个库.它包含libevent_core和libevent_extra的内容.你不应使用这个库,在将来可能会移除这个库.
+
+在某些平台会安装以下的库:
+libevent_pthreads
+    这个库基于pthread库实现了线程和锁.它没有被放到libevent_core中.当你不是以多线程的方式使用libevent时,你不需要连接pthread.
+
+libevent_openssl
+    这个库基于bufferevent和openssl库实现了加密的通信.它没有被放到libevent_core中.当你不使用加密连接的时候,你需要要连接openssl.
+
+3.头文件
+所有的公开头文件被安装在event2目录,头文件分为三大类:
+API headers
+    定义了libevent的公开接口
+
+Compatibility headers
+    定义那些已废弃的函数,你不需要包含它,除非你是从老的libevent向新版移植.
+
+Structure headers
+    这些头文件定义了一些相对易变的结构体.有些结构体因为要对其组件提供更快的访问而在此暴露,有些是因为历史原因.依赖任意个这些头文件都将破坏你编译出的二进制目标的兼容性.这些头文件以_struct.h结尾.
+
+
+
+
+
+

@@ -1,0 +1,52 @@
+1.创建event_base
+    在你使用任何libevent函数之前,你需要创建一个或多个event_base.每个event_base持有N多events并且通过poll来决定激活哪一个event.
+    如果一个event_base被设置成使用锁,它可以在多个线程中被安全访问.它的loop只能在单个线程中run.
+    如果你希望每个线程都poll I/O,那么每个线程都需要一个event_basee.
+
+2.获取一个缺省event_base
+    event_base_new()函数使用缺省设置创建一个event_base并返回它.如果有错误,返回NULL.
+    对于大多数应用,使用缺省的event_base就足够了.
+    
+3.设置特殊的event_base
+    如果你想要对得到的event_base进行更多的控制,你需要使用event_confg来设置它. event_config保存了你用来设置event_base的选项.将event_config传递给event_base_new_with_config()将得到一个设置后的event_base.
+    如何向event_config指定配置项?
+    int event_config_avoid_method(struct event_config *cfg, const char *method);    // 不使用method方法
+    int event_config_require_features(struct event_config *cfg, enum event_method_feature feature);  // 不使用不支持feature特性的方法
+    int event_config_set_flag(struct event_config *cfg, enum event_base_config flag); // 使用flag所指定run-time标志来创建event_base.
+
+    struct event_config cfg = event_config_new(void);
+    struct event_base base = event_base_new_with_config(cfg);
+    event_config_free(cfg);
+
+4.释放event_base
+    当你使用event_base完毕,你可以使用event_base_free()来释放它.
+    注意,这个函数不会释放event_base当前所关联的任何events,或event持有的socket,或event持有的指针.
+    
+5.设置event_base的属性
+    设置event_base支持多优先级,默认只有一个优先级.
+    int event_base_priority_init(sruct event_base *base, int n_priorigites);
+    n_priorigites必须不小于1.优先级取值范围[0, n_priorigites-1]
+
+    获取event_base所支持的优先级个数
+    int event_base_get_npriorities(struct event_base *base);
+
+
+6.在fork()后reinit event_base
+    并非所有的event后端方法在fork()后还保持干净,所以,如果你的应用使用fork()或类似的系统调用开始一个新进程,你希望在fork后继续使用event_base,你需要reinit它.
+    int event_reinit(struct event_base *base);
+
+    Example
+    if (fork()) {
+        /* In Parent */
+        continuew_running_parent(base);
+    } else {
+        /* In Child */
+        event_reinit(base);
+        continue_running_child(base);
+    }
+
+
+
+    
+    
+    

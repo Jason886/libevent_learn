@@ -1,0 +1,59 @@
+Libevent有一些进程共享的全局设定,会影响整个库.
+
+1.Libevent日志
+Libevent可以log内部错误和警告,它同时也支持调试日志,如果它编译时支持调试日志.
+默认情况下,这些信息打印到stderr.你可以提供自己的log函数,改变这一行为.
+
+接口:
+<pre>
+#define EVENT_LOG_DEBUG 0
+#define EVENT_LOG_MSG   1
+#define EVENT_LOG_WARN  2
+#define EVENT_LOG_ERR   3
+
+typedef void (*event_log_cb)(int severity, const char *msg);
+
+void event_set_log_callback(event_log_cb cb);
+</pre>
+
+注意:
+不要在event_log_cb中调用libevent函数,很可能会出现难以诊断的bug. (个人猜想:应该会出现无限递归event_log_cb)
+
+调式日志默认不开启,并且也不会发往event_log_cb. 如果编译libevent时支持调试日志,你可以手动开启它.
+接口:
+<pre>
+#define EVENT_DBG_NONE 0
+#define EVENT_DBG_ALL 0xffffffffu
+
+void event_enable_debug_logging(ev_uint32_t which);
+</pre>
+调试日志是冗长罗嗦的
+
+2.处理致命错误
+当libevent检测到不可恢复的内部错误时(such as a corrupted data structure),它的默认行为是调用exit()或abort()退出当前进程.这些错误通常是因为某个地方有bug:在你的代码里或libevent自身.
+如果你的应用想更优雅的处理致命错误,可以重写libevent的默认行为:
+
+typedef void (*event_fatal_cb)(int err);
+void event_set_fatal_callback(event_fatal_cb cb);
+
+你的错误处理函数不应该再调用任何libevent函数
+
+3.内存管理
+默认情况下,libevent使用C library的内存管理函数来从堆上分配内存.你可以提供自己的内存管理函数来替换它们: malloc, realloc, and free.
+当你有更高效的内存分配函数或你想使用instrumented allocator来检测内存泄漏时,你可能会替换默认的内存管理函数.
+
+void event_set_mem_functions(void *(*malloc_fn)(size_t sz),
+                             void *(*realloc_fn)(void *ptr, size_t sz),
+                             void (*free_fn)(void *ptr));
+
+4.多线程和锁
+在多线程环境下使用libevent的结构体,归为三种方式:
+    有些结构体只能在单线程中使用,永远不要同时在多个线程中使用这些结构体.
+    有些结构体是可选加锁:当你需要同时在多线程中使用它们是,你可以告知libevent.
+    有些结构体是默认加锁:如果libevent在支持锁的状态下运行,总是可以安全的在多个线程中同时使用它们.
+
+为了libevent能使用锁,你必须提供锁函数.
+如果你使用pthread或原生的Windows线程代码,很幸运,已经有预置的锁函数了.
+
+
+
