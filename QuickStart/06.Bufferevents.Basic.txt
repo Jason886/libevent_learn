@@ -1,0 +1,81 @@
+1.Bufferevent和evbuffer
+每个bufferevent都有一个输入buffer和一个输出buffer,它们是struct evbuffer类型.当你有数据要写给bufferevent时,直接添加到它的输出buffer,当bufferevent有数据可读时,你可从它的输入buffer中取到.
+
+2.回调和水位
+每个bufferevent都有两个关于数据的回调:读回调,写回调.缺省情况下,每当传输层有数据可读时,读回调会被调用.每当输出buffer中有足够多的数据并写入传输层时,写回调会被调用.
+    4个水位:
+        读低水位, 当高于这个值时触发读回调,缺省是0.即每当有数据读入缓冲区时,读触发读回调.
+        读高水位, 当高于这个值时停止读,直到输入缓冲区水位重新低于它的时候.缺省是无限制,即永远不会停止读数据到缓冲区.
+        写低水位, 每当一个写操作导致水位低于此的时候,写回调被调用,缺省是0,即不会触发写回调.
+        写高水位, 没有被bufferevent直接使用.
+
+bufferevent还有一个事件回调,每当连接被关闭或者发生错误时,事件回调被调用.定义了如下事件:
+    BEV_EVENT_READING
+        在读操作时发生了事件
+    BEV_EVENT_WRITING
+        在写操作时发生了事件
+    BEV_EVENT_ERROR
+        在bufferevent操作时发生了错误
+    BEV_EVENT_TIMEOUT
+        bufferevent超时
+    BEV_EVENT_EOF
+        bufferevent收到了结束符     
+    BEV_EVENT_CONNECTED
+        连接完成
+
+
+3.bufferevent选项
+当创建bufferevent时,可提供如下选项:
+    BEV_OPT_CLOSE_ON_FREE
+        当bufferevent释放时,关闭其底下的传输层.
+    BEV_OPT_THREADSAFE
+        可安全在多线程中使用
+    BEV_OPT_DEFER_CALLBACKS
+        回调会被延迟调用
+    BEV_OPT_UNLOCK_CALLBACKS
+        在调用回调的过程中,解开锁
+
+4.创建一个socket-based bufferevent
+
+struct bufferevent *bufferevent_socket_new(struct event_base *base, evutil_socket_t fd, enum bufferevent_options options);
+fd - 一个socket描述符, -1表示暂时不设置.
+
+5.连接
+
+int bufferevent_socket_connect(struct bufferevent *bev, struct sockaddr *address, int addrlen);
+
+6.使用hostname连接
+
+int bufferevent_socket_connect_hostname(struct bufferevent *bev, struct evdns_base *dns_base, int family, const char *hostname);
+
+int bufferevent_socket_get_dns_error(struct bufferevent *bev);
+
+7.释放bufferevent
+void bufferevent_free(struct bufferevent *bev);
+
+8.回调
+typedef void (*bufferevent_data_cb)(struct bufferevent *bev, void *ctx);
+typedef void (*bufferevent_event_cb)(struct bufferevent *bev, short events, void *ctx);
+void bufferevent_setcb(struct bufferevent *bufferev, bufferevent_data_cb readcb, bufferevent_data_cb writecb, bufferevent_event_cb eventcb, void *cbargs);
+
+9.操纵数据
+struct evbuffer *bufferevent_get_input(struct bufferevent *bufev);
+struct evbuffer *bufferevent_get_output(struct bufferevent *bufev);
+
+int bufferevent_write(struct bufferevent *bufev, const void *data, size_t size);
+int bufferevent_write_buffer(struct bufferevent *bufev, struct evbuffer *buf);
+
+size_t bufferevent_read(struct bufferevent * bufev, void *data, size_t size);
+int bufferevent_read_buffer(struct bufferevent * bufev, struct evbuffer *buf);
+
+10.读写超时
+void bufferevent_set_timeout(struct bufferevent *bufev, const struct timeval *timeout_read, const struct timeval *timeout_write);
+
+11.手动lock和unlock bufferevent
+有时希望对bufferevent的一系列操作是原子的.
+void bufferevent_lock(struct bufferevent *bufev);
+void bufferevent_unlock(struct bufferevent *bufev);
+在使用这个函数锁定bufferevent的同时,也会锁定其相关联的evbuffers.
+这个函数是可递归的,可以对一个已经lock的bufferevent再次调用lock操作.但要注意,必须成对的调用unlock解锁.
+
+
