@@ -1,0 +1,44 @@
+1.创建/释放evconnlistener
+
+struct evconnlistener * evconnlistener_new(struct event_base *base, evconnlistener_cb cb, void *ptr, unsigned flags, int backlog, evutil_socket_t fd);
+struct evconnlistener * evconnlistener_new_bind(struct event_base *base, evconnlistener_cb cb, void *ptr, unsigned flags, int backlog, const struct sockaddr *sa, int socklen);
+void evconnlistener_free(struct evconnlistener *lev);
+
+cb - 当收到新连接时回调
+ptr - 将传递给cb的参数
+flags - 控制监听器的行为
+backlog - 最大等待连接数. -1 自动选择, 0 libevent认为你已经对socket调用了listen().
+
+fd - 已经bind()的socket, 必须是非阻塞的.
+sa, socklen - 传给libevent,libevent将会创建非阻塞socket并bind().
+
+flags详解:
+    LEV_OPT_CLOSE_ON_FREE listener在被释放时释放其底层的socket.
+    LEV_OPT_CLOSE_ON_EXEC 
+    LEV_OPT_REUSEABLE
+    LEV_OPT_THREADSAFE
+
+2.回调
+typedef void (*evconnlistener_cb)(struct evconnlistener *listener, evutil_socket_t sock, struct sockaddr *addr, int len, void *ptr);
+
+listener 
+sock - 新创建的socket
+addr, len - 客户端地址
+ptr - 用户数据
+
+3.Enable/Disable
+
+int evconnlistener_disable(struct evconnlistener *lev);
+int evconnlistener_enable(struct evconnlistener *lev);
+
+4.修改回调
+evconnlistener_set_cb(struct evconnlistener *listener, evconnlistener_cb cb, void *arg);
+
+5.查看evconnlistener
+evutil_socket_t evconnlistener_get_fd(struct evconnlistener *lev);
+struct event_base * evconnlistener_get_base(struct evconnlistener *lev);
+
+6.错误回调
+typedef void (*evconnlistener_errorcb)(struct evconnlistener *lev, void *ptr);
+void evconnlistener_set_error_cb(struct evconnlistener *lev, evconnlistener_errorcb errorcb);
+
